@@ -49,7 +49,7 @@ def cisco(device):
 #
 
     now = datetime.now()
-    backup_dir = f'backup/{device["host"]}'
+    backup_dir = f'logs/{device["host"]}'
     bk_file_name = f'{device["host"]}_{now.year}{now.month}{now.day}_org.conf'
 #    print(f'File name :{bk_file_name}')
 #
