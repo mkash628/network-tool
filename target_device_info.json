@@ -1,0 +1,66 @@
+[
+
+    {
+        "host": "192.168.1.202",
+        "username": "mkw", 
+        "password": "fuk@e511", 
+        "secret"  : "fuk@e511",
+        "device_type": "cisco_ios"
+    },
+    {
+        "host": "192.168.1.209",
+        "username": "mkw", 
+        "password": "fuk@e511", 
+        "secret"  : "fuk@e511",
+        "device_type": "cisco_ios"
+    },
+    {
+        "host": "192.168.1.202",
+        "username": "mkw", 
+        "password": "fuk@e511", 
+        "secret"  : "fuk@e511",
+        "device_type": "cisco_ios"
+    },
+    {
+        "host": "192.168.1.202",
+        "username": "mkw", 
+        "password": "fuk@e511", 
+        "secret"  : "fuk@e511",
+        "device_type": "cisco_ios"
+    },
+    {
+        "host": "192.168.1.202",
+        "username": "mkw", 
+        "password": "fuk@e511", 
+        "secret"  : "fuk@e511",
+        "device_type": "cisco_ios"
+    },
+    {
+        "host": "192.168.1.202",
+        "username": "mkw", 
+        "password": "fuk@e511", 
+        "secret"  : "fuk@e511",
+        "device_type": "cisco_ios"
+    },
+    {
+        "host": "192.168.1.202",
+        "username": "mkw", 
+        "password": "fuk@e511", 
+        "secret"  : "fuk@e511",
+        "device_type": "cisco_ios"
+    },
+    {
+        "host": "192.168.1.202",
+        "username": "mkw", 
+        "password": "fuk@e511", 
+        "secret"  : "fuk@e511",
+        "device_type": "cisco_ios"
+    },
+     {
+        "host": "192.168.1.202",
+        "username": "mkw", 
+        "password": "fuk@e511", 
+        "secret"  : "fuk@e511",
+        "device_type": "cisco_ios"
+    }
+ ]
