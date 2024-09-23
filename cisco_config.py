@@ -9,208 +9,317 @@ import difflib
 import sys
 import signal
 import re
-#
-#  History
-#  2023/04/19 adding save_config for cisco_xe or cisco_nxos
-#  2023/04/25 adding print success 
-#  2023/04/26 adding excption and output to  result to the log file for notice to caller 
-#  2023/04/29 adding excption msg  result to file 
-#
-def getconf(conn,dir,file):
-#    print(f'Dir :{dir} File name :{file}')
-    text = conn.send_command('show running-config')
-    text_list = text.splitlines()
-    text_list = text_list[3:-1]
-    text =  '\n'.join(text_list)
-    
-    with  open(f'{dir}/{file}','w') as fd :
-      fd.write(text)
+import os
+import argparse
+import msvcrt
+"""
+History
+  2023/04/19 adding save_config for cisco_xe or cisco_nxos
+  2023/04/25 adding print success 
+  2023/04/26 adding excption and output each module result to file 
+  2023/04/29 adding excption msg  result to file 
+  2024/07/27 adding print command name to showlog file
+  2024/08/05 adding -D option for dry run and change log file name
+  2024/08/07 delete unnecessary comments
+  2024/08/09 adding follwing function
+             (1) change comment and TOD expression to western style
+             (2) in the befgging wait for 5 second to proceed the processFA value handling and job caller log file name
+                 in any char input , process has exited.
+             (3) FA value handling and job caller log file name
+             sys.exit call sooner thay expected
+  2024/08/20  adding error handling for send_config_set()
+  2024/09/06 adding "ip" key  to JSON file and support cli file name both IP and host
+ 
+"""
 
-def compconf(old,new,dir,html):
-    with open(f'{dir}/{old}', 'r') as file1:
-      with open(f'{dir}/{new}', 'r') as file2:
-  
-        diff = difflib.HtmlDiff()
-#
-        with open(f'{dir}/{html}','w') as file3:
-          output = file3 
-          output.writelines(diff.make_file(file1,file2))
-#
+###############################################################
+# get running-configurtaion
+# @param conn netmiko class 
+# @param dir  output directory 
+# @param file output file
+###############################################################
+def getconf(conn,dir,file):
+  text = conn.send_command('show running-config')
+  text_list = text.splitlines()
+  text_list = text_list[3:-1]
+  text =  '\n'.join(text_list)
     
-def cisco(device):
+  with  open(f'{dir}/{file}','w') as fd:
+    fd.write(text)
+
+###############################################################
+# compare old configurarion with new configurati\on and create diff 
+# 
+# @param old configuration file for before change
+# @param new configurarion file for latese
+# @param dir directiory for output
+# @param html file name for output
+###############################################################
+def compconf(old,new,dir,html):
+  with open(f'{dir}/{old}', 'r') as oldfile:
+    with open(f'{dir}/{new}', 'r') as newfile:
+      # Make diff
+      diff = difflib.HtmlDiff()
+      with open(f'{dir}/{html}','w') as difffile:
+        output = difffile 
+        output.writelines(diff.make_file(oldfile,newfile))
+
+###############################################################
+# connect target network device and issuing commands
+# @param jason file for network device information 
+###############################################################
+def cisco(device,nowtime):
   try:
-  
-    result=0
+    global rc
+    rc=0
     msg=''
-    print(f'Connect {device["host"]}')
+    ip_key="None"
+    if  "ip" in device  and "host" in device:
+       print(f'Connect with IP {device["ip"]}')
+       ip_key="Both"
+    elif "ip" in device and "host" not in device :
+      ip_key="ip"
+      print(f'Connect with IP {device["ip"]}')
+    elif "host" in device : 
+      ip_key="host"
+      print(f'Connect with Host {device["host"]}')
     connection = netmiko.ConnectHandler(**device)
     connection.enable()
-
+    print(f'Connected')
 #
+#08/20
+    err_char_nx="Invalid command"
+    err_char_ios="^% Invalid"
+    err_char_f5="[0-9a-zA-Z ]*[:]"
 
+#    now = nowtime
     now = datetime.now()
-    backup_dir = f'logs/{device["host"]}'
-    bk_file_name = f'{device["host"]}_{now.year}{now.month}{now.day}_org.conf'
-#    print(f'File name :{bk_file_name}')
-#
-    
+    timestr = now.strftime('%d-%m-%Y-%H-%M')
+### 09/06
+    if ip_key == "Both"  :
+      backup_dir = f'logs_{timestr}/{device["host"]}'
+      bk_file_name = f'{device["ip"]}_{device["host"]}_{now.year}{now.month}{now.day}_org.conf'
+    elif ip_key == "ip" :
+      backup_dir = f'logs_{timestr}/{device["ip"]}'
+      bk_file_name = f'{device["ip"]}_{now.year}{now.month}{now.day}_org.conf'
+    else :
+         backup_dir = f'backup_{timestr}/{device["host"]}'
+         bk_file_name = f'{device["host"]}_{now.year}{now.month}{now.day}_org.conf'
+###
     if not os.path.exists(backup_dir):
         os.makedirs(backup_dir)
-#
-# Take current Config
-#
+
+    # get current config 
     getconf(connection,backup_dir,bk_file_name)
-#
-          
-# config change 
-    cli_file_name = f'{device["host"]}_config.txt'
-#    print (cli_file_name)
-    with open(f'{cli_file_name}','r') as conf:
-
-     commands =[]
-     
-     DEVTYPE=device["device_type"]
-
-#     print(DEVTYPE)
-
-     if DEVTYPE=="cisco_ftd" :
-       for cli in conf:
-         commands = cli
-#         print(f'{device["host"]} {commands}') 
-#        output = connection.send_command(commands)
-         output = connection.send_command(command_string=commands,expect_string=r"#")
-#         print (output)
-     else :
-       for cli in conf:
-         text = cli.strip("\n")
-         commands.append(text)
       
-#       print(f'{device["host"]} {commands}')     
-       output = connection.send_config_set(commands)
-#       print (output)
-
-    
-# confirm configuration chage
-    cli_file_name = f'{device["host"]}_show.txt'
-#    print (cli_file_name)
-    log_file_name = f'{device["host"]}_{now.year}{now.month}{now.day}_log.txt'
+    # excuting conf t and adding configuration text from the file
+    #
+    ### 09/09
+    if ip_key == "Both" or ip_key == "ip" :
+      cli_file_name = f'{device["ip"]}_config.txt'
+    elif  ip_key == "host" :
+      cli_file_name = f'{device["host"]}_config.txt'
+#
+    is_file=os.path.exists(cli_file_name)
+    if is_file :
+      print(f'Config file name : {cli_file_name}')
+    else :
+      print("conf file not exist")
+###
+    with open(f'{cli_file_name}','r') as conf:
+      commands =[]
+      DEVTYPE=device["device_type"]
+      # process for  cisco fire-power
  
-#    print (log_file_name)
-    
-    with open(f'{backup_dir}/{log_file_name}', 'w') as logfd: 
-      with open(f'{cli_file_name}','r') as show:
-#       DEVTYPE=device["device_type"]
-#       if DEVTYPE=="cisco_ftd" :
-        
-         for cli in show:
-           commands = cli
+      for cli in conf:
+        text = cli.strip("\n")
+        commands.append(text)      
+#
+### 08/20
+      if deb=="Off" :
+          if DEVTYPE =="f5_tmsh" :
+            output = connection.send_config_set(commands,error_pattern=err_char_f5)
+          elif DEVTYPE =="cisco_nxos" :
+            output = connection.send_config_set(commands,error_pattern=err_char_nx)
+          else :
+            output = connection.send_config_set(commands,error_pattern=err_char_ios)
+#          print(output)
 
-#        output = connection.send_command(commands)
-#          print({commands},DEVTYPE) 
-           if DEVTYPE=="cisco_ftd" and commands=="exit" :
-#            print(commands,DEVTYPE) 
-             output = connection.send_command(command_string=commands,expect_string=r">")
-           else :
-#             print(f'{device["host"]} {commands}') 
-             output = connection.send_command(command_string=commands,expect_string=r"#")
-#           print (output)
-           logfd.write(output)
-           msg=output
+    # excutiong show commannd to get current status
+#
+### 09/06
+      if ip_key == "Both" or ip_key == "ip" :
+        cli_file_name = f'{device["ip"]}_show.txt'
+      elif  ip_key == "host" :
+        cli_file_name = f'{device["host"]}_show.txt'
+#
+      is_file=os.path.exists(cli_file_name)
+
+      if is_file :
+        print(f'show file name : {cli_file_name}')
+        if ip_key == "Both" :
+          log_file_name = f'{device["ip"]}_{device["host"]}_{now.year}{now.month}{now.day}_log.txt'
+          
+        elif ip_key == "host" :  
+          log_file_name = f'{device["host"]}_{now.year}{now.month}{now.day}_log.txt' 
+        else :
+         log_file_name = f'{device["ip"]}_{now.year}{now.month}{now.day}_log.txt'
+###
+      else :
+        print("show  file not exist")
+#    cli_file_name = f'{device["host"]}_show.txt'
+#    log_file_name = f'{device["host"]}_{now.year}{now.month}{now.day}_log.txt'
+    with open(f'{backup_dir}/{log_file_name}', 'w') as logfd:
+      with open(f'{cli_file_name}','r') as show:     
+        for cli in show:
+          commands = cli
+          output = connection.send_command_timing(
+                    command_string=commands,
+                    strip_command=False,
+                    strip_prompt=False,
+                    read_timeout=20)
+
+          logfd.write(output)
+          msg = output
              
-#
-        
-# Take new configuration 
-
-    bk_file_name_new = f'{device["host"]}_{now.year}{now.month}{now.day}_new.conf'
-#    print(f'File name :{bk_file_name_new}')
-#
-
+    # get lateset configuration
+    if ip_key == "Both" :
+      bk_file_name_new = f'{device["ip"]}_{device["host"]}_{now.year}{now.month}{now.day}_new.conf'
+    elif ip_key == "ip" :
+      bk_file_name_new = f'{device["ip"]}_{now.year}{now.month}{now.day}_new.conf'
+    else :
+      bk_file_name_new = f'{device["host"]}_{now.year}{now.month}{now.day}_new.conf'
+ 
     getconf(connection,backup_dir,bk_file_name_new)
-#
-#    with open(f'{backup_dir}/{bk_file_name_new}', 'w') as f:
-#        f.write(output)
 
-    DEV=device["device_type"]
+    DEVTYPE=device["device_type"]   
+    # issued copy run startup in case of cisco devies
+    if deb == "Off":
+      if DEVTYPE=="cisco_xe" or DEVTYPE=="cisco_nxos"  or DEVTYPE=="cisco_ios" :
+        connection.save_config()
+
+    # close  connection to device 
+    connection.disconnect() 
+#
+### 09/06
+    if ip_key=="Both" or ip_key=="ip" :
+        print(f'Disconnect {device["ip"]}')
+    else : 
+        print(f'Disconnect {device["host"]}')
+###
+    rc=0
     
 
-    if DEV=="cisco_xe"  or DEV=="cisco_nxos" :
-        connection.save_config()
+    # write diff file in html format
 #
-#     
-#   
-    connection.disconnect() 
-    print(f'Disconnect {device["host"]}')
-
-#
-    html_file_name = f'{device["host"]}_{now.year}{now.month}{now.day}_diff.html'
+### 08/09
+    if ip_key == "Both" :
+      html_file_name = f'{device["ip"]}_{device["host"]}_{now.year}{now.month}{now.day}_diff.html'
+    elif ip_key == "ip" :
+       html_file_name = f'{device["ip"]}_{now.year}{now.month}{now.day}_diff.html'
+    else :
+      html_file_name = f'{device["host"]}_{now.year}{now.month}{now.day}_diff.html'
+ 
+#html_file_name = f'{device["host"]}_{now.year}{now.month}{now.day}_diff.html'
+###
     compconf(bk_file_name,bk_file_name_new,backup_dir,html_file_name)
     errmsg=msg
     return 0,errmsg
-#
-  except   Exception as e:
+  
+  # exception handling
+  except Exception as e:
     print("** fail **",e)
-
-
     errmsg=(str(e.args))
-#   print(e.message)
-    return 99,errmsg
+    rc=99
+    return rc,errmsg
 
-#   sys.exit
 
+###############################################################
+# Main
+###############################################################
 
 if __name__ == "__main__":
-
-
-     now = datetime.now()
-     valid_file_name =f'{now.year}{now.month}{now.day}_result.txt'
-     TIME=f' {now.hour}:{now.minute}:{now.second} '
-     Module_type="Network"
-     timestr = time.strftime("%d-%m-%Y-%H-%M")
-     log_file_name= "F:\\DRScripts\\ScriptLogs\\1\\"+Module_type + timestr+".log"
-#     log_file_name= Module_type + timestr+".log"
-# 
-     with open(r"target_device_info.json", "r") as f:
-         device_info_list = json.load(f)
-       
-     threads = list()
-     for info in device_info_list:
-        HOST=f'host : {info["host"]}'
-        rc=0
-        msg=""
-
-        sta=list()
-        sta, msg = cisco(info)
-
-        FLG=0
-
-#        print("return coode:",sta)
-#        print("meesage:",msg)
 #
-        with open(f'{valid_file_name}', 'a+') as file3:
-          if sta==0:
-            WORD=" success "
-            WORD=TIME+HOST+WORD+msg
-            file3.write(WORD+'\n')
-          else:
-            WORD=" failed"
-            WORD=TIME+HOST+WORD+msg
-            file3.write(WORD+'\n')
-            FLG=1
-            print("fail")
-            sys.exit(1)
+# prologue
+#
+  # if -d option specifed, only run show txt file record
+  parser = argparse.ArgumentParser(description='Get dry_run option exist or not')
+  parser.add_argument('-d','--dryrun',help='show command only',action="store_true")
+  parser.add_argument('-j','--json', help='name of json file',default='target_device_info.json')
+  parser.add_argument('-l','--logs', help='name of logs file',default='backup')
+  args = parser.parse_args()
+  if args.dryrun:
+    deb = 'On'
+    print("*** Note dryrun specified ***")
+    print("*** show command only execution ***")
+  else :
+    deb = 'Off'
+#
+## 09/04
+    
+  json_fn=args.json
+  print(f'json file name: {json_fn}')
+  # get current dir name
+  script_dir = os.path.dirname(__file__) + "\\"
+  path = script_dir.split("\\")
+
+  # move to path direcorty confirm running env
+  os.chdir(script_dir)
+  #
+  now = datetime.now()
+  valid_file_name =f'{now.strftime("%Y-%m-%d")}_result.txt'
+  print("running dir:",script_dir)
+      
+  # issue commands accroding to json file record order
+  with open(f'{json_fn}', "r") as f:
+    device_info_list = json.load(f)
+    threads = list()
+    for info in device_info_list:
+      msg=""
+      sta=list()
+      now = datetime.now()
+      sta,msg=cisco(info,now)
+
+#   FLG=0
+
+#
+# epirogue
+#
+    TIME=f' {now.hour}:{now.minute}:{now.second} '
+    if "host" in info  and "ip" in info :
+      HOST=f'host : {info["ip"]}_{info["host"]}'
+    elif "ip" in info and "host" not in info :
+      HOST=f'host : {info["ip"]}'
+    else : 
+      HOST=f'host : {info["host"]}'
+    Module_type="Network"
+    timestr = now.strftime('%d-%m-%Y-%H-%M')
+    # write log  detail information 
  
-     if FLG==0:
-       print("success")
-       f = open(log_file_name, "w")
-       f.write("success"+'\n')
-       f.write(time.strftime("%b %d %H:%M:%S") + " Session has ended \n")
-       f.close()
-       sys.exit(0)
-     else:
-       print("fail")
-       f = open(log_file_name, "w")
-       f.write("fail"+'\n')
-       f.write(time.strftime("%b %d %H:%M:%S") + " Session has ended \n")
-       f.close()
-       sys.exit(1)
+    print("result log file:",valid_file_name)
+  
+    # write process compliton status
+    with open(f'{valid_file_name}', 'a+') as resultfile:
+      if sta==0:
+        WORD="success"
+        print(WORD)
+        WORD1=timestr+" "+HOST+" "+WORD
+        resultfile.write(WORD1 + '\n')
+        WORD2=timestr+" "+HOST+" last issued command:\n "+msg
+        resultfile.write(WORD2 + '\n')
+      else:
+        WORD="failed"
+        WORD1=timestr+" "+HOST+" "+WORD
+        resultfile.write(WORD1 + '\n')
+        WORD2=timestr+" "+HOST+"last command: "+msg
+        resultfile.write(WORD2 + '\n')
+#
+### 0809 
+#       print("fail")
+        resultfile.write("fail"+'\n')
+        resultfile.write(now.strftime("%b %d %H:%M:%S") + " Session has ended \n")
+        resultfile.close()
+
+### 0809 
+#        sys.exit(1)
 
