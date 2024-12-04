@@ -37,9 +37,11 @@
 -e input Excel file name
  
  2.1 Input
+ 
      Excel file which include IP address,hostname,user id,password,secret password,session_log file name,device_type, do not change colum order
  
  2.2 Output
+ 
     JSON file ,Excel work-sheet name is used by Excel file name  
 
 
