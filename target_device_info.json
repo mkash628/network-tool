@@ -1,28 +1,38 @@
 [
-	{
-		"ip":"aaa.bbb.ccc.1",
-		"host":"host name1",
-		"username":"admin",
-		"password":"xxxx",
-		"device_type":"cisco_nxos",
-		"secret":"xxxx"
-	},
-	{
-		"ip":"aaa.bbb.ccc.2",
-		"host":"host name3",
-		"username":"admin",
-		"password":"xxxx",
-		"device_type":"cisco_xe",
-		"secret":"xxxx"
-	},
-	{
-		"ip":"aaa.bbb.ccc.3",
-		"host":"host name3",
-		"username":"admin",
-		"password":"xxxx",
-		"device_type":"cisco_ios",
-		"secret":"xxxx"
-	}
-
-
+    {
+        "host": "host1",
+        "ip": "192.168.1.101",
+        "username": "user1", 
+        "password": "password1", 
+        "secret"  : "password2",
+        "session_log"  : "host1_session.log",
+        "device_type": "cisco_ios"
+    },
+    {
+        "host": "host2",
+        "ip": "192.168.1.102",
+        "username": "user1", 
+        "password": "password1", 
+        "secret"  : "password2",
+        "session_log"  : "host2_session.log",
+        "device_type": "cisco_xe"
+    },
+    {
+        "host": "host3",
+        "ip": "192.168.1.103",
+        "username": "user1", 
+        "password": "password1", 
+        "secret"  : "password2",
+        "session_log"  : "host3_session.log",
+        "device_type": "cisco_nxos"
+    },
+    {
+        "host": "host4",
+        "ip": "192.168.1.104",
+        "username": "root", 
+        "password": "password1", 
+        "secret"  : "password2",
+        "session_log"  : "host4_session.log",
+        "device_type": "f5_tmsh"
+    }
 ]
