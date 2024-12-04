@@ -2,7 +2,7 @@
 cisco_config.py - configuration update and issue show commands for Cisco ,F5　BigIP using netmiko
 
 1.Input
-target_device=info.json : IP address,userid,password,device-type
+target_device_info.json : IP address,userid,password,device-type
 <IPADDR>_config.txt:IPADDR shouuld be change to network device
 <IPADDR>_show.txt: IPADDR shouuld be change to network device
 
