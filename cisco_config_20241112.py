@@ -74,7 +74,7 @@ def cisco(device,nowtime):
     rc=0
     msg=''
     ip_key="None"
-    now = datetime.now()
+    now = nowtime
     timestr = now.strftime('%m-%d-%Y-%H-%M')
     if  "ip" in device  and "host" in device:
        print(f'Connect with IP {device["ip"]}')
@@ -273,7 +273,6 @@ if __name__ == "__main__":
     for info in device_info_list:
       msg=""
       sta=list()
-      now = datetime.now()
       sta,msg=cisco(info,now)
 
 #   FLG=0

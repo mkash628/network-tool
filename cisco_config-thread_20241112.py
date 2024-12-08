@@ -69,13 +69,13 @@ def compconf(old,new,dir,html):
 # connect target network device and issuing commands
 # @param jason file for network device information 
 ###############################################################
-def cisco(device,q):
+def cisco(device,q,nowtime):
   try:
     global rc
     rc=0
     msg=''
     ip_key="None"
-    now = datetime.now()
+    now = nowtime
     timestr = now.strftime('%m-%d-%Y-%H-%M')
     if  "ip" in device  and "host" in device:
        print(f'Connect with IP {device["ip"]}')
@@ -280,7 +280,7 @@ if __name__ == "__main__":
     q1=queue.Queue()
     for info in device_info_list:
       rc=0
-      thread = threading.Thread(target=cisco, args=([info,q1]))
+      thread = threading.Thread(target=cisco, args=([info,q1,now]))
       threads.append(thread)
       sta=list()
 
